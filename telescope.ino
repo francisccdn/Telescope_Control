@@ -5,12 +5,12 @@
 
 #define ALT_DOOR 5
 #define E1 8
-#define E2 9 
+#define E2 9
 #define E3 10
 #define E4 11
 
-const byte ROWS = 4; 
-const byte COLS = 4; 
+const byte ROWS = 4;
+const byte COLS = 4;
 
 char hexaKeys[ROWS][COLS] = {
   {'1', '2', '3', 'A'},
@@ -19,15 +19,15 @@ char hexaKeys[ROWS][COLS] = {
   {'*', '0', '#', 'D'}
 };
 
-byte rowPins[COLS] = {6, 7, 8, 9}; 
-byte colPins[ROWS] = {2, 3, 4, 5}; 
+byte rowPins[COLS] = {6, 7, 8, 9};
+byte colPins[ROWS] = {2, 3, 4, 5};
 
 char inKey[3];
 byte inKeyIndex = 0;
 
 byte numKey, indicador = 0;
 
-Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS); 
+Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 LiquidCrystal_I2C lcd(0x27,20,4);
 
@@ -52,24 +52,24 @@ void loop() {
   char readKey = customKeypad.getKey();
 
   if (readKey){
-    inKey[inKeyIndex] = readKey; 
+    inKey[inKeyIndex] = readKey;
     lcd.print(inKey[inKeyIndex]);
-    inKeyIndex++; 
+    inKeyIndex++;
   }
 
 //Manda o input para o motor
 
-  if (inKeyIndex == 3 && indicador == 0){   
+  if (indicador == 0 && inKeyIndex == 3){
     numKey = atol(inKey);
 
     lcd.print("º");
     lcd.setCursor(11, 1);
-    
+
     Serial.print(numKey);
     Serial.print("º\n");
-    
-    Motor(650, 1, (numKey - currentAngle)/360 ); 
-    
+
+    Motor(650, 1, (numKey - currentAngle)/360 );
+
     currentAngle = numKey;
     ClearData();
 
@@ -78,13 +78,13 @@ void loop() {
 
 //Manda o input para o servo
 
-  if (inKeyIndex == 3 && indicador == 1){
+  if (indicador == 1 && inKeyIndex == 3){
     numKey = atol(inKey);
-    
+
     lcd.print("º");
     Serial.print(numKey);
     Serial.print("\n");
-    
+
     altitude.write(numKey);
     ClearData();
 
@@ -96,18 +96,18 @@ void loop() {
 
   if (indicador == 2 && inKeyIndex == 1){ //se os dados já foram enviados para o motor e o servo, e uma tecla foi pressionada
     LcdReset();
-    indicador = 0;
+    indicador = 0; //Indica que o usuario deseja fazer um novo input
   }
 
 }
 
 void Motor(int vel, int sentido , float voltas){
   azimuth.setSpeed(vel); // RPM
-    
+
   for(int i = 1; i <= 64 * voltas; i++){
     azimuth.step(passosPorGiro * sentido);
   }
-  
+
   delay(5000);
 }
 
@@ -121,7 +121,7 @@ void LcdReset(){
 
 void ClearData(){
   while(inKeyIndex != 0){
-    inKey[inKeyIndex--] = 0; 
+    inKey[inKeyIndex--] = 0;
   }
   return;
 }

@@ -4,10 +4,10 @@
 #include <Servo.h>
 
 #define ALT_DOOR 5
-#define E1 47
-#define E2 49
-#define E3 51
-#define E4 53
+#define E1 53
+#define E2 51
+#define E3 49
+#define E4 47
 
 const byte ROWS = 4;
 const byte COLS = 4;
@@ -20,23 +20,35 @@ char hexaKeys[ROWS][COLS] = {
 };
 //                    r1  r2  r3  r4
 byte rowPins[COLS] = {32, 34, 36, 38};
-//                    c1  c2  c3  c4 
-byte colPins[ROWS] = {28, 26, 24, 22}; 
+//                    c1  c2  c3  c4
+byte colPins[ROWS] = {28, 26, 24, 22};
 
 char inKey[3];
 byte inKeyIndex = 0;
+int numKey;
 
-byte numKey, indicador = 0;
+int currentAngle = 0; //Guarda o ultimo input de angulo para reajustar para o proximo de acordo
+
+byte indicador = 0;
+
+byte customChar[] = {
+  B00110,
+  B01001,
+  B01001,
+  B00110,
+  B00000,
+  B00000,
+  B00000,
+  B00000
+};
+
+const int passosPorGiro = 32;
+
+float coefAngular;
 
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
 
 LiquidCrystal_I2C lcd(0x27,20,4);
-
-const int passosPorGiro = 32;
-
-byte currentAngle = 0; //Guarda o ultimo input de angulo para reajustar para o proximo de acordo
-
-float coefAngular;
 
 Stepper azimuth(passosPorGiro, E1, E3, E2, E4);
 
@@ -46,6 +58,7 @@ void setup() {
     Serial.begin(9600);
     altitude.attach(ALT_DOOR);
     lcd.init();
+    lcd.createChar(0, customChar);
     lcd.backlight();
     LcdReset();
 }
@@ -56,6 +69,10 @@ void loop() {
   if (readKey){
     inKey[inKeyIndex] = readKey;
     lcd.print(inKey[inKeyIndex]);
+
+    Serial.print(inKey[inKeyIndex]);
+    Serial.print(" DIGITADO \n");
+
     inKeyIndex++;
   }
 
@@ -67,12 +84,12 @@ void loop() {
 
     coefAngular = (numKey - currentAngle)/360.0;
 
-    lcd.print("º");
+    lcd.write(0);
     lcd.setCursor(11, 1);
 
     Serial.print(numKey);
-    Serial.print("º\n");
-    Serial.print(" DIGITADO \n");
+    Serial.print("º");
+    Serial.print(" MOTOR \n");
     Serial.print(coefAngular);
     Serial.print(" PARAMETRO \n");
 
@@ -81,7 +98,7 @@ void loop() {
     }else{
         Motor(650, 1, coefAngular);
     }
-    
+
     currentAngle = numKey;
     ClearData();
 
@@ -94,9 +111,9 @@ void loop() {
   if (indicador == 1 && inKeyIndex == 3){
     numKey = atol(inKey);
 
-    lcd.print("º");
+    lcd.write(0);
     lcd.noCursor();
-    
+
     Serial.print(numKey);
     Serial.print(" SERVO \n");
 
@@ -107,12 +124,13 @@ void loop() {
   }
 
 
-/*Reseta o LCD quando uma nova tecla é pressionada
-(sem isso, o LCD resetaria automaticamente)*/
+//Reseta o LCD quando uma nova tecla é pressionada
+//(sem isso, o LCD resetaria automaticamente)
 
   if (indicador == 2 && inKeyIndex == 1){ //se os dados já foram enviados para o motor e o servo, e uma tecla foi pressionada
     LcdReset();
     indicador = 0; //Indica que o usuario deseja fazer um novo input
+    ClearData(); //Limpa a tecla que foi digitada para resetar
   }
 
 }

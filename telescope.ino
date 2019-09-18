@@ -9,8 +9,8 @@
 #define E3 49
 #define E4 47
 
-const byte ROWS = 4;
-const byte COLS = 4;
+#define ROWS 4
+#define COLS 4
 
 char hexaKeys[ROWS][COLS] = {
   {'1', '2', '3', 'A'},
@@ -19,17 +19,9 @@ char hexaKeys[ROWS][COLS] = {
   {'*', '0', '#', 'D'}
 };
 //                    r1  r2  r3  r4
-byte rowPins[COLS] = {32, 34, 36, 38};
+byte rowPins[COLS] = {38, 36, 34, 32};
 //                    c1  c2  c3  c4
 byte colPins[ROWS] = {28, 26, 24, 22};
-
-char inKey[3];
-byte inKeyIndex = 0;
-int numKey;
-
-int currentAngle = 0; //Guarda o ultimo input de angulo para reajustar para o proximo de acordo
-
-byte indicador = 0;
 
 byte customChar[] = {
   B00110,
@@ -42,16 +34,19 @@ byte customChar[] = {
   B00000
 };
 
-const int passosPorGiro = 32;
+char inKey[3];
+byte inKeyIndex = 0;
+int numKey;
 
+int currentAngle = 0; //Guarda o ultimo input de angulo para reajustar para o proximo de acordo
+const int passosPorGiro = 32;
 float coefAngular;
 
+byte dadoRecebido = 0;
+
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
-
-LiquidCrystal_I2C lcd(0x27,20,4);
-
+LiquidCrystal_I2C lcd(0x27, 20, 4);
 Stepper azimuth(passosPorGiro, E1, E3, E2, E4);
-
 Servo altitude;
 
 void setup() {
@@ -79,7 +74,7 @@ void loop() {
 
 //Manda o input para o motor
 
-  if (indicador == 0 && inKeyIndex == 3){
+  if (dadoRecebido == 0 && inKeyIndex == 3){
     numKey = atol(inKey);
 
     coefAngular = (numKey - currentAngle)/360.0;
@@ -94,21 +89,21 @@ void loop() {
     Serial.print(" PARAMETRO \n");
 
     if(coefAngular < 0){ //Permite que o motor gire nas duas direções
-        Motor(650, -1, coefAngular * -1);
+        Motor(1, coefAngular * -1);
     }else{
-        Motor(650, 1, coefAngular);
+        Motor(-1, coefAngular);
     }
 
     currentAngle = numKey;
     ClearData();
 
-    indicador = 1; //Indica que o motor recebeu o dado
+    dadoRecebido = 1; //Indica que o motor recebeu o dado
   }
 
 
 //Manda o input para o servo
 
-  if (indicador == 1 && inKeyIndex == 3){
+  if (dadoRecebido == 1 && inKeyIndex == 3){
     numKey = atol(inKey);
 
     lcd.write(0);
@@ -120,23 +115,23 @@ void loop() {
     altitude.write(numKey);
     ClearData();
 
-    indicador = 2; //Indica que o servo recebeu o dado
+    dadoRecebido = 2; //Indica que o servo recebeu o dado
   }
 
 
 //Reseta o LCD quando uma nova tecla é pressionada
 //(sem isso, o LCD resetaria automaticamente)
 
-  if (indicador == 2 && inKeyIndex == 1){ //se os dados já foram enviados para o motor e o servo, e uma tecla foi pressionada
+  if (dadoRecebido == 2 && inKeyIndex == 1){ //se os dados já foram enviados para o motor e o servo, e uma tecla foi pressionada
     LcdReset();
-    indicador = 0; //Indica que o usuario deseja fazer um novo input
+    dadoRecebido = 0; //Indica que o usuario deseja fazer um novo input
     ClearData(); //Limpa a tecla que foi digitada para resetar
   }
 
 }
 
-void Motor(int vel, int sentido , float voltas){
-  azimuth.setSpeed(vel); // RPM
+void Motor(int sentido , float voltas){
+  azimuth.setSpeed(650); // RPM
 
   for(int i = 1; i <= 64 * voltas; i++){
     azimuth.step(passosPorGiro * sentido);
@@ -156,7 +151,6 @@ void LcdReset(){
 
 void ClearData(){
   while(inKeyIndex != 0){
-    inKey[inKeyIndex--] = 0;
+    inKey[--inKeyIndex] = 0;
   }
-  return;
 }

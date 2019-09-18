@@ -45,12 +45,11 @@ float coefAngular;
 byte dadoRecebido = 0;
 
 Keypad customKeypad = Keypad(makeKeymap(hexaKeys), rowPins, colPins, ROWS, COLS);
-LiquidCrystal_I2C lcd(0x27, 20, 4);
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 Stepper azimuth(passosPorGiro, E1, E3, E2, E4);
 Servo altitude;
 
 void setup() {
-    Serial.begin(9600);
     altitude.attach(ALT_DOOR);
     lcd.init();
     lcd.createChar(0, customChar);
@@ -64,16 +63,10 @@ void loop() {
   if (readKey){
     inKey[inKeyIndex] = readKey;
     lcd.print(inKey[inKeyIndex]);
-
-    Serial.print(inKey[inKeyIndex]);
-    Serial.print(" DIGITADO \n");
-
     inKeyIndex++;
   }
 
-
-//Manda o input para o motor
-
+  //Manda o input para o motor
   if (dadoRecebido == 0 && inKeyIndex == 3){
     numKey = atol(inKey);
 
@@ -82,14 +75,8 @@ void loop() {
     lcd.write(0);
     lcd.setCursor(11, 1);
 
-    Serial.print(numKey);
-    Serial.print("º");
-    Serial.print(" MOTOR \n");
-    Serial.print(coefAngular);
-    Serial.print(" PARAMETRO \n");
-
     if(coefAngular < 0){ //Permite que o motor gire nas duas direções
-        Motor(1, coefAngular * -1);
+        Motor(1, coefAngular);
     }else{
         Motor(-1, coefAngular);
     }
@@ -101,16 +88,12 @@ void loop() {
   }
 
 
-//Manda o input para o servo
-
+  //Manda o input para o servo
   if (dadoRecebido == 1 && inKeyIndex == 3){
     numKey = atol(inKey);
 
     lcd.write(0);
     lcd.noCursor();
-
-    Serial.print(numKey);
-    Serial.print(" SERVO \n");
 
     altitude.write(numKey);
     ClearData();
@@ -119,18 +102,20 @@ void loop() {
   }
 
 
-//Reseta o LCD quando uma nova tecla é pressionada
-//(sem isso, o LCD resetaria automaticamente)
-
+  //Reseta o LCD quando uma nova tecla é pressionada
+  //(sem isso, o LCD resetaria automaticamente)
   if (dadoRecebido == 2 && inKeyIndex == 1){ //se os dados já foram enviados para o motor e o servo, e uma tecla foi pressionada
     LcdReset();
     dadoRecebido = 0; //Indica que o usuario deseja fazer um novo input
     ClearData(); //Limpa a tecla que foi digitada para resetar
   }
-
 }
 
 void Motor(int sentido , float voltas){
+  if(voltas < 0){
+    voltas = voltas * -1;
+  }
+
   azimuth.setSpeed(650); // RPM
 
   for(int i = 1; i <= 64 * voltas; i++){
